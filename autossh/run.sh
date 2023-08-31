@@ -7,6 +7,7 @@ KEY_PATH=/data/ssh_keys
 HOSTNAME=$(jq --raw-output ".hostname" $CONFIG_PATH)
 SSH_PORT=$(jq --raw-output ".ssh_port" $CONFIG_PATH)
 USERNAME=$(jq --raw-output ".username" $CONFIG_PATH)
+KEY_TYPE=$(jq --raw-output ".key_type" $CONFIG_PATH)
 
 REMOTE_FORWARDING=$(jq --raw-output ".remote_forwarding[]" $CONFIG_PATH)
 
@@ -24,9 +25,9 @@ fi
 if [ ! -d "$KEY_PATH" ]; then
   bashio::log.info "No previous key pair found"
   mkdir -p "$KEY_PATH"
-  ssh-keygen -b 4096 -t ed25519 -N "" -C "hassio-setup-via-autossh" -f "${KEY_PATH}/autossh_rsa_key"
+  ssh-keygen -b 4096 -t ${KEY_TYPE} -N "" -C "hassio-setup-via-autossh" -f "${KEY_PATH}/autossh_${KEY_TYPE}_key"
   bashio::log.info "The public key is:"
-  cat "${KEY_PATH}/autossh_rsa_key.pub"
+  cat "${KEY_PATH}/autossh_${KEY_TYPE}_key.pub"
   bashio::log.warning "Add this key to '~/.ssh/authorized_keys' on your remote server now!"
   bashio::log.warning "Please restart add-on when done. Exiting..."
   exit 1
@@ -36,7 +37,7 @@ fi
 
 echo ""
 bashio::log.info "The public key is:"
-cat "${KEY_PATH}/autossh_rsa_key.pub"
+cat "${KEY_PATH}/autossh_${KEY_TYPE}_key.pub"
 bashio::log.info "Please add this key to '~/.ssh/authorized_keys' on your remote server"
 
 #
@@ -76,13 +77,13 @@ bashio::log.info "The container is connected via the following IP addresses:"
 ip -o address show
 
 COMMAND="/usr/bin/autossh "\
-" -M 0 "\
+"-M 0 "\
 "-o ServerAliveInterval=30 "\
 "-o ServerAliveCountMax=3 "\
 "-o StrictHostKeyChecking=no "\
 "-o ExitOnForwardFailure=yes "\
 "-p ${SSH_PORT} -t -t "\
-"-i ${KEY_PATH}/autossh_rsa_key "\
+"-i ${KEY_PATH}/autossh_${KEY_TYPE}_key "\
 "${USERNAME}@${HOSTNAME}"
 
 if [ ! -z "${REMOTE_FORWARDING}" ]; then
